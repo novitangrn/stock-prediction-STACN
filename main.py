@@ -84,16 +84,19 @@ sectors = {
 @st.cache_data
 def load_historical_data(sector_code):
     try:
+        # Construct file path based on sector code
         file_path = Path(f"data/{sector_code}_data.csv")
-        df = pd.read_csv(file_path, skiprows=[1]) 
-        df.columns = ['date', 'open', 'high', 'low', 'close', 'stock_num', 'vol']
-        df['date'] = pd.to_datetime(df['date'])
+        
+        # Read the CSV file with exact column names
+        df = pd.read_csv(file_path, parse_dates=['date'])
+        
+        # Ensure all numeric columns are float
         numeric_cols = ['open', 'high', 'low', 'close', 'stock_num', 'vol']
         for col in numeric_cols:
             df[col] = pd.to_numeric(df[col], errors='coerce')
         
-        df = df.sort_values('date')
-        df = df.reset_index(drop=True)
+        # Sort by date to ensure correct order
+        df = df.sort_values('date').reset_index(drop=True)
         
         return df
     except Exception as e:
@@ -104,18 +107,25 @@ def load_historical_data(sector_code):
 tabs = st.tabs(list(sectors.keys()))
 
 sector_file_mapping = {
-    "ENRG": "A",
-    "BASIC": "B",
-    "INDS": "C",
-    "NONCYC": "D",
-    "CYC": "E",
-    "HEALTH": "F",
-    "FIN": "G",
-    "PROP": "H",
-    "TECH": "I",
-    "INFRA": "J",
-    "TRANS": "K"
+    "ENRG": "A",    # Energy
+    "BASIC": "B",   # Basic Materials
+    "INDS": "C",    # Industrials
+    "NONCYC": "D",  # Consumer Noncyclicals
+    "CYC": "E",     # Consumer Cyclicals
+    "HEALTH": "F",  # Healthcare
+    "FIN": "G",     # Financials
+    "PROP": "H",    # Properties & Real Estate
+    "TECH": "I",    # Technology
+    "INFRA": "J",   # Infrastructures
+    "TRANS": "K"    # Transportation & Logistic
 }
+
+# In the tab loop, update how you load the data:
+for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
+    with tab:
+        # Get the corresponding file prefix
+        file_prefix = sector_file_mapping[sector_code]
+        df = load_historical_data(file_prefix)
 
 
 for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
