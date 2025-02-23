@@ -85,18 +85,24 @@ sectors = {
 def load_historical_data(sector_code):
     try:
         file_path = Path(f"data/{sector_code}_data.csv")
-        df = pd.read_csv(file_path)
-        df['Date'] = pd.to_datetime(df['Date'])
-        df = df.sort_values('Date')
+        df = pd.read_csv(file_path, skiprows=[1]) 
+        df.columns = ['date', 'open', 'high', 'low', 'close', 'stock_num', 'vol']
+        df['date'] = pd.to_datetime(df['date'])
+        numeric_cols = ['open', 'high', 'low', 'close', 'stock_num', 'vol']
+        for col in numeric_cols:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+        
+        df = df.sort_values('date')
+        df = df.reset_index(drop=True)
+        
         return df
     except Exception as e:
         st.error(f"Error loading data for sector {sector_code}: {str(e)}")
-        return pd.DataFrame(columns=['Date', 'Open', 'High', 'Low', 'Close', 'Volume', 'Stock Num'])
-   
+        return pd.DataFrame(columns=['date', 'open', 'high', 'low', 'close', 'stock_num', 'vol'])
 
+   
 tabs = st.tabs(list(sectors.keys()))
 
-# Mapping for file names
 sector_file_mapping = {
     "ENRG": "A",
     "BASIC": "B",
@@ -215,83 +221,148 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
         # PANEL ANALISIS HISTORIS DI KANAN
         with col2:
             st.markdown(f"### 📊 Analisis Data Historis - {sector_name}")
-            
-            # Metrics
+
+            # Metrics with error handling
             m1, m2 = st.columns(2)
             with m1:
-                st.metric("Harga Terakhir", f"${df['Close'].iloc[-1]:.2f}", 
-                         f"{((df['Close'].iloc[-1] - df['Close'].iloc[-2])/df['Close'].iloc[-2]*100):.2f}%")
+                if not df.empty and len(df) > 1:
+                    last_close = df['close'].iloc[-1]
+                    prev_close = df['close'].iloc[-2]
+                    close_change = ((last_close - prev_close)/prev_close*100)
+                    st.metric("Harga Terakhir", f"${last_close:.2f}", f"{close_change:.2f}%")
+                else:
+                    st.metric("Harga Terakhir", "N/A", "0%")
+            
             with m2:
-                st.metric("Volume", f"{df['Volume'].iloc[-1]:,.0f}", 
-                         f"{((df['Volume'].iloc[-1] - df['Volume'].iloc[-2])/df['Volume'].iloc[-2]*100):.2f}%")
-            
-            # Chart
-            time_range = st.select_slider(
-                "Rentang Waktu",
-                options=["5 Hari", "10 Hari", "1 Bulan", "3 Bulan"],
-                value="10 Hari",
-                key=f"timerange_{sector_code}"
-            )
-
-            ranges = {
-                "5 Hari": 5,
-                "10 Hari": 10,
-                "1 Bulan": 30,
-                "3 Bulan": 90
-            }
-
-            filtered_df = df.tail(ranges[time_range])
-            
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=filtered_df['Date'],
-                y=filtered_df['Close'],
-                mode='lines',
-                name='Close',
-                line=dict(color='#0066cc', width=2)
-            ))
-            
-            fig.add_trace(go.Scatter(
-                x=filtered_df['Date'],
-                y=filtered_df['Open'],
-                mode='lines',
-                name='Open',
-                line=dict(color='#00cc66', width=2)
-            ))
-            
-            fig.update_layout(
-                title=f'Pergerakan Harga Saham - {sector_name}',
-                yaxis_title='Harga',
-                xaxis_title='Tanggal',
-                template='plotly_white',
-                height=400,
-                legend=dict(
-                    orientation="h",
-                    yanchor="bottom",
-                    y=1.02,
-                    xanchor="right",
-                    x=1
+                if not df.empty and len(df) > 1:
+                    last_vol = df['vol'].iloc[-1]
+                    prev_vol = df['vol'].iloc[-2]
+                    vol_change = ((last_vol - prev_vol)/prev_vol*100)
+                    st.metric("Volume", f"{last_vol:,.0f}", f"{vol_change:.2f}%")
+                else:
+                    st.metric("Volume", "N/A", "0%") 
+                    
+            # Chart section
+            if not df.empty:
+                time_range = st.select_slider(
+                    "Rentang Waktu",
+                    options=["5 Hari", "10 Hari", "1 Bulan", "3 Bulan"],
+                    value="10 Hari",
+                    key=f"timerange_{sector_code}"
                 )
-            )
             
-            st.plotly_chart(fig, use_container_width=True)
+                ranges = {
+                    "5 Hari": 5,
+                    "10 Hari": 10,
+                    "1 Bulan": 30,
+                    "3 Bulan": 90
+                }
+            
+                # Get the last N days of data
+                filtered_df = df.copy()
+                filtered_df = filtered_df.tail(ranges[time_range])
+            
+                # Create figure
+                fig = go.Figure()
+            
+                # Add Close price line
+                fig.add_trace(go.Scatter(
+                    x=filtered_df['date'],  # Note: using lowercase 'date'
+                    y=filtered_df['close'],  # Note: using lowercase 'close'
+                    mode='lines',
+                    name='Close',
+                    line=dict(color='#0066cc', width=2)
+                ))
+            
+                # Add Open price line
+                fig.add_trace(go.Scatter(
+                    x=filtered_df['date'],  # Note: using lowercase 'date'
+                    y=filtered_df['open'],  # Note: using lowercase 'open'
+                    mode='lines',
+                    name='Open',
+                    line=dict(color='#00cc66', width=2)
+                ))
+            
+                # Add candlestick chart
+                fig.add_trace(go.Candlestick(
+                    x=filtered_df['date'],
+                    open=filtered_df['open'],
+                    high=filtered_df['high'],
+                    low=filtered_df['low'],
+                    close=filtered_df['close'],
+                    name='Candlestick',
+                    visible='legendonly'  # Hidden by default
+                ))
+            
+                # Update layout with more details
+                fig.update_layout(
+                    title=dict(
+                        text=f'Pergerakan Harga Saham - {sector_name}',
+                        x=0.5,
+                        font=dict(size=20)
+                    ),
+                    yaxis_title='Harga (IDR)',
+                    xaxis_title='Tanggal',
+                    template='plotly_white',
+                    height=400,
+                    legend=dict(
+                        orientation="h",
+                        yanchor="bottom",
+                        y=1.02,
+                        xanchor="right",
+                        x=1
+                    ),
+                    # Add hover tools
+                    hovermode='x unified',
+                    # Add range selector buttons
+                    xaxis=dict(
+                        rangeselector=dict(
+                            buttons=list([
+                                dict(count=5, label="5H", step="day", stepmode="backward"),
+                                dict(count=10, label="10H", step="day", stepmode="backward"),
+                                dict(count=1, label="1B", step="month", stepmode="backward"),
+                                dict(count=3, label="3B", step="month", stepmode="backward"),
+                                dict(step="all", label="Semua")
+                            ])
+                        ),
+                        rangeslider=dict(visible=True),
+                        type="date"
+                    )
+                )
+            
+                # Update y-axis to show comma format for large numbers
+                fig.update_yaxes(tickformat=",")
+            
+                # Show the plot
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("Tidak ada data untuk ditampilkan dalam grafik")
+                
 
             # Update the historical data detail section
             st.markdown("##### Data Historis Detail")
             if not df.empty:
+                # Format the DataFrame for display
                 display_df = df.copy()
-                numeric_cols = display_df.select_dtypes(include=[np.number]).columns
-                format_dict = {}
-                for col in numeric_cols:
-                    if 'price' in col.lower() or col in ['Open', 'High', 'Low', 'Close']:
-                        format_dict[col] = '${:.2f}'
-                    elif 'volume' in col.lower() or col == 'Volume':
-                        format_dict[col] = '{:,.0f}'
-                    else:
-                        format_dict[col] = '{:.2f}'
+                display_df = display_df.rename(columns={
+                    'date': 'Tanggal',
+                    'open': 'Open',
+                    'high': 'High',
+                    'low': 'Low',
+                    'close': 'Close',
+                    'stock_num': 'Stock Num',
+                    'vol': 'Volume'
+                })
                 
                 st.dataframe(
-                    display_df.style.format(format_dict),
+                    display_df.style.format({
+                        'Open': '${:.2f}',
+                        'High': '${:.2f}',
+                        'Low': '${:.2f}',
+                        'Close': '${:.2f}',
+                        'Volume': '{:,.0f}',
+                        'Stock Num': '{:,.0f}'
+                    }),
                     height=200
                 )
             else:
