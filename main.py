@@ -83,33 +83,41 @@ sectors = {
 # Data historis dengan cache
 @st.cache_data
 def load_historical_data(sector_code):
-    dates = pd.date_range(end=date.today(), periods=365, freq='D')
-    # Simulasi data yang berbeda untuk setiap sektor
-    np.random.seed(hash(sector_code) % 2**32)
-    base_price = np.random.randint(50, 200)
-    data = {
-        "Date": dates,
-        "Open": np.random.normal(base_price, base_price*0.1, 365),
-        "High": np.random.normal(base_price*1.1, base_price*0.1, 365),
-        "Low": np.random.normal(base_price*0.9, base_price*0.1, 365),
-        "Close": np.random.normal(base_price, base_price*0.1, 365),
-        "Volume": np.random.randint(1000, 10000, size=365),
-        "Stock Num": np.random.randint(1, 100, size=365)
-    }
-    return pd.DataFrame(data)
+    try:
+        file_path = Path(f"data/{sector_code}_data.csv")
+        df = pd.read_csv(file_path)
+        df['Date'] = pd.to_datetime(df['Date'])
+        df = df.sort_values('Date')
+        return df
+    except Exception as e:
+        st.error(f"Error loading data for sector {sector_code}: {str(e)}")
+        return pd.DataFrame(columns=['Date', 'Open', 'High', 'Low', 'Close', 'Volume', 'Stock Num'])
+   
 
-# Tabs untuk setiap sektor
 tabs = st.tabs(list(sectors.keys()))
 
-# Loop untuk setiap tab/sektor
+# Mapping for file names
+sector_file_mapping = {
+    "ENRG": "A",
+    "BASIC": "B",
+    "INDS": "C",
+    "NONCYC": "D",
+    "CYC": "E",
+    "HEALTH": "F",
+    "FIN": "G",
+    "PROP": "H",
+    "TECH": "I",
+    "INFRA": "J",
+    "TRANS": "K"
+}
+
+
 for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
     with tab:
-        df = load_historical_data(sector_code)
-        
-        # Layout dengan kolom
+        file_prefix = sector_file_mapping[sector_code]
+        df = load_historical_data(file_prefix)
         col1, col2 = st.columns([2, 1])
 
-        # PANEL PREDIKSI DI KIRI
         with col1:
             st.markdown(f"### 📰 Input Berita & Prediksi - {sector_name}")
             
@@ -267,16 +275,24 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
             )
             
             st.plotly_chart(fig, use_container_width=True)
-            
-            # Data historis detail
+
+            # Update the historical data detail section
             st.markdown("##### Data Historis Detail")
-            st.dataframe(
-                filtered_df.style.format({
-                    'Open': '${:.2f}',
-                    'High': '${:.2f}',
-                    'Low': '${:.2f}',
-                    'Close': '${:.2f}',
-                    'Volume': '{:,.0f}'
-                }),
-                height=200
-            )
+            if not df.empty:
+                display_df = df.copy()
+                numeric_cols = display_df.select_dtypes(include=[np.number]).columns
+                format_dict = {}
+                for col in numeric_cols:
+                    if 'price' in col.lower() or col in ['Open', 'High', 'Low', 'Close']:
+                        format_dict[col] = '${:.2f}'
+                    elif 'volume' in col.lower() or col == 'Volume':
+                        format_dict[col] = '{:,.0f}'
+                    else:
+                        format_dict[col] = '{:.2f}'
+                
+                st.dataframe(
+                    display_df.style.format(format_dict),
+                    height=200
+                )
+            else:
+                st.warning(f"No historical data available for {sector_name}")
