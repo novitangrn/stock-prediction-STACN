@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from datetime import date, datetime, timedelta
 from pathlib import Path
+from scraper import scrape_news
 
 # Konfigurasi halaman
 st.set_page_config(
