@@ -260,7 +260,6 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                 else:
                     st.metric("Performa YTD", "N/A", "0%")
 
-            
             # Chart section
             if not df.empty:
                 time_range = st.selectbox(
@@ -347,6 +346,9 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                     'vol': 'Volume'
                 })
             
+                # Format date to dd/mm/yyyy
+                display_df['Tanggal'] = display_df['Tanggal'].dt.strftime('%d/%m/%Y')
+            
                 st.dataframe(
                     display_df.style.format({
                         'Open': 'Rp {:,.2f}',
@@ -360,3 +362,4 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                 )
             else:
                 st.warning(f"No historical data available for {sector_name}")
+
