@@ -241,7 +241,7 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                             if scraped_titles:
                                 # Store scraped titles in a different session state key
                                 st.session_state[f"scraped_news_{sector_code}"] = "\n".join(scraped_titles)
-                                st.experimental_rerun()
+                                st.rerun()
                             else:
                                 st.warning("Tidak ada berita yang ditemukan untuk tanggal ini")
                         except Exception as e:
