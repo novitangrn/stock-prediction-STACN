@@ -259,7 +259,7 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                         st.metric("Performa YTD", "N/A", "0%")
                 else:
                     st.metric("Performa YTD", "N/A", "0%")
-
+            
             # Chart section
             if not df.empty:
                 time_range = st.selectbox(
@@ -333,7 +333,7 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
             else:
                 st.warning("Tidak ada data untuk ditampilkan dalam grafik")
             
-            # Data HistoRIS
+            # Historical data section
             st.markdown("##### Data Historis Detail")
             if not df.empty:
                 display_df = df.rename(columns={
@@ -355,7 +355,8 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                 start_date, end_date = st.date_input(
                     "Filter Tanggal:",
                     [min_date.date(), max_date.date()],
-                    format="DD/MM/YYYY"
+                    format="DD/MM/YYYY",
+                    key=f"date_filter_{sector_code}"
                 )
             
                 # Convert to datetime for comparison
