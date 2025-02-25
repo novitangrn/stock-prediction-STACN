@@ -336,48 +336,54 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
             # Historical data section
             st.markdown("##### Data Historis Detail")
             if not df.empty:
-                display_df = df.rename(columns={
-                    'date': 'Tanggal',
-                    'open': 'Open',
-                    'high': 'High',
-                    'low': 'Low',
-                    'close': 'Close',
-                    'stock_num': 'Stock Num',
-                    'vol': 'Volume'
-                })
+                try:
+                    display_df = df.rename(columns={
+                        'date': 'Tanggal',
+                        'open': 'Open',
+                        'high': 'High',
+                        'low': 'Low',
+                        'close': 'Close',
+                        'stock_num': 'Stock Num',
+                        'vol': 'Volume'
+                    })
             
-                # Format date to dd/mm/yyyy
-                display_df['Tanggal'] = pd.to_datetime(display_df['Tanggal']).dt.strftime('%d/%m/%Y')
+                    # Format date to dd/mm/yyyy
+                    display_df['Tanggal'] = pd.to_datetime(display_df['Tanggal']).dt.strftime('%d/%m/%Y')
             
-                # Date filter
-                min_date = pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y').min()
-                max_date = pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y').max()
-                start_date, end_date = st.date_input(
-                    "Filter Tanggal:",
-                    [min_date.date(), max_date.date()],
-                    format="DD/MM/YYYY",
-                    key=f"date_filter_{sector_code}"
-                )
+                    # Date filter
+                    min_date = pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y').min()
+                    max_date = pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y').max()
+                    start_date, end_date = st.date_input(
+                        "Filter Tanggal:",
+                        [min_date.date(), max_date.date()],
+                        format="DD/MM/YYYY",
+                        key=f"date_filter_{sector_code}"
+                    )
             
-                # Convert to datetime for comparison
-                start_date = pd.to_datetime(start_date)
-                end_date = pd.to_datetime(end_date)
+                    # Convert to datetime for comparison
+                    start_date = pd.to_datetime(start_date)
+                    end_date = pd.to_datetime(end_date)
             
-                # Apply date filter
-                mask = (pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y') >= start_date) & \
-                       (pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y') <= end_date)
-                filtered_display_df = display_df[mask]
+                    # Apply date filter
+                    mask = (pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y') >= start_date) & \
+                           (pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y') <= end_date)
+                    filtered_display_df = display_df[mask]
             
-                st.dataframe(
-                    filtered_display_df.style.format({
-                        'Open': 'Rp {:,.2f}',
-                        'High': 'Rp {:,.2f}',
-                        'Low': 'Rp {:,.2f}',
-                        'Close': 'Rp {:,.2f}',
-                        'Volume': '{:,.0f}',
-                        'Stock Num': '{:,.0f}'
-                    }),
-                    height=200
-                )
+                    st.dataframe(
+                        filtered_display_df.style.format({
+                            'Open': 'Rp {:,.2f}',
+                            'High': 'Rp {:,.2f}',
+                            'Low': 'Rp {:,.2f}',
+                            'Close': 'Rp {:,.2f}',
+                            'Volume': '{:,.0f}',
+                            'Stock Num': '{:,.0f}'
+                        }),
+                        height=200
+                    )
+                except ValueError as ve:
+                    st.error(f"Terjadi kesalahan saat memproses data: {ve}")
+                except Exception as e:
+                    st.error(f"Kesalahan tak terduga: {e}")
             else:
-                st.warning(f"No historical data available for {sector_name}")
+                st.warning(f"Tidak ada data historis untuk {sector_name}")
+
