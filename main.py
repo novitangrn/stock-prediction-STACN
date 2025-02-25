@@ -332,7 +332,7 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.warning("Tidak ada data untuk ditampilkan dalam grafik")
-            
+
             # Historical data section
             st.markdown("##### Data Historis Detail")
             if not df.empty:
@@ -349,8 +349,22 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                 # Format date to dd/mm/yyyy
                 display_df['Tanggal'] = display_df['Tanggal'].dt.strftime('%d/%m/%Y')
             
+                # Date filter
+                min_date = display_df['Tanggal'].min()
+                max_date = display_df['Tanggal'].max()
+                start_date, end_date = st.date_input(
+                    "Filter Tanggal:",
+                    [pd.to_datetime(min_date, format='%d/%m/%Y'), pd.to_datetime(max_date, format='%d/%m/%Y')],
+                    format="%d/%m/%Y"
+                )
+            
+                # Apply date filter
+                mask = (pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y') >= start_date) & \
+                       (pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y') <= end_date)
+                filtered_display_df = display_df[mask]
+            
                 st.dataframe(
-                    display_df.style.format({
+                    filtered_display_df.style.format({
                         'Open': 'Rp {:,.2f}',
                         'High': 'Rp {:,.2f}',
                         'Low': 'Rp {:,.2f}',
@@ -362,4 +376,3 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                 )
             else:
                 st.warning(f"No historical data available for {sector_name}")
-
