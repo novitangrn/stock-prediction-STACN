@@ -333,7 +333,6 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
             else:
                 st.warning("Tidak ada data untuk ditampilkan dalam grafik")
 
-            # Historical data section
             st.markdown("##### Data Historis Detail")
             if not df.empty:
                 display_df = df.rename(columns={
@@ -355,7 +354,7 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                 start_date, end_date = st.date_input(
                     "Filter Tanggal:",
                     [pd.to_datetime(min_date, format='%d/%m/%Y'), pd.to_datetime(max_date, format='%d/%m/%Y')],
-                    format="%d/%m/%Y"
+                    format="DD/MM/YYYY"
                 )
             
                 # Apply date filter
