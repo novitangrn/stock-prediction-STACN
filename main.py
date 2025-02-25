@@ -177,8 +177,8 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                         st.success(f"Prediksi untuk {days} hari ke depan berhasil!")
                         
                         # Grafik prediksi
-                        hist_dates = df['Date'].iloc[-5:].tolist()
-                        hist_prices = df['Close'].iloc[-5:].tolist()
+                        hist_dates = df['date'].iloc[-5:].tolist()
+                        hist_prices = df['close'].iloc[-5:].tolist()
                         
                         fig2 = go.Figure()
                         fig2.add_trace(go.Scatter(
