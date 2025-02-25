@@ -1,20 +1,19 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from scraper import scrape_news
 
-# Konfigurasi halaman
+# Page configuration
 st.set_page_config(
     page_title='Sectoral Stock Prediction Dashboard',
     page_icon='📈',
     layout='wide'
 )
 
-# Custom CSS untuk styling
+# Custom CSS for styling
 st.markdown("""
     <style>
     .stButton>button {
@@ -59,14 +58,14 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Judul dengan styling
+# Title with styling
 st.markdown("""
     <h1 style='text-align: center; color: #0066cc; margin-bottom: 2rem;'>
         📈 Prediksi Saham Sektoral dengan Model STACN
     </h1>
     """, unsafe_allow_html=True)
 
-# Definisi sektor
+# Sector definitions with consistent mapping
 sectors = {
     "A - Energy": "ENRG",
     "B - Basic Materials": "BASIC",
@@ -81,14 +80,29 @@ sectors = {
     "K - Transportation": "TRANS"
 }
 
-# Data historis dengan cache
+# Create a single mapping for sector codes to file prefixes
+sector_file_mapping = {
+    "ENRG": "A",
+    "BASIC": "B",
+    "INDS": "C",
+    "NONCYC": "D",
+    "CYC": "E",
+    "HEALTH": "F",
+    "FIN": "G",
+    "PROP": "H",
+    "TECH": "I",
+    "INFRA": "J",
+    "TRANS": "K"
+}
+
+# Historical data loading with cache
 @st.cache_data
-def load_historical_data(sector_code):
+def load_historical_data(sector_prefix):
     try:
-        # Construct file path based on sector code
-        file_path = Path(f"data/{sector_code}_data.csv")
+        # Construct file path based on sector prefix
+        file_path = Path(f"data/{sector_prefix}_data.csv")
         
-        # Read the CSV file with exact column names
+        # Read the CSV file
         df = pd.read_csv(file_path, parse_dates=['date'])
         
         # Ensure all numeric columns are float
@@ -101,60 +115,137 @@ def load_historical_data(sector_code):
         
         return df
     except Exception as e:
-        st.error(f"Error loading data for sector {sector_code}: {str(e)}")
+        st.error(f"Error loading data for sector {sector_prefix}: {str(e)}")
         return pd.DataFrame(columns=['date', 'open', 'high', 'low', 'close', 'stock_num', 'vol'])
 
-   
+# Generate predictions function (moved outside of submit button logic)
+def generate_predictions(start_price, days, volatility=0.015):
+    prices = [start_price]
+    for i in range(days):
+        change = np.random.normal(0.002, volatility)
+        new_price = prices[-1] * (1 + change)
+        prices.append(new_price)
+    return prices[1:]
+
+# Function to create prediction chart
+def create_prediction_chart(future_dates, predictions, sector_name):
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=future_dates,
+        y=predictions,
+        mode='lines+markers',
+        name='Prediksi',
+        line=dict(color='#FF9900', width=2, dash='dot'),
+        marker=dict(size=8)
+    ))
+    
+    fig.update_layout(
+        title=f'Prediksi Harga - {sector_name}',
+        yaxis_title='Harga',
+        xaxis_title='Tanggal',
+        template='plotly_white',
+        height=400
+    )
+    
+    return fig
+
+# Function to create historical price chart
+def create_historical_chart(filtered_df, sector_name):
+    fig = go.Figure()
+    
+    # Add Close price line
+    fig.add_trace(go.Scatter(
+        x=filtered_df['date'],
+        y=filtered_df['close'],
+        mode='lines',
+        name='Close',
+        line=dict(color='#0066cc', width=2)
+    ))
+    
+    # Add Open price line
+    fig.add_trace(go.Scatter(
+        x=filtered_df['date'],
+        y=filtered_df['open'],
+        mode='lines',
+        name='Open',
+        line=dict(color='#00cc66', width=2)
+    ))
+    
+    # Update layout
+    fig.update_layout(
+        title=dict(
+            text=f'Pergerakan Harga Saham - {sector_name}',
+            x=0.0,
+            font=dict(size=18)
+        ),
+        yaxis_title='Harga (IDR)',
+        xaxis_title='Tanggal',
+        template='plotly_white',
+        height=400,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+        hovermode='x unified'
+    )
+    
+    # Format y-axis
+    fig.update_yaxes(tickformat=",")
+    
+    return fig
+
+# Create tabs
 tabs = st.tabs(list(sectors.keys()))
 
-sector_file_mapping = {
-    "ENRG": "A",    # Energy
-    "BASIC": "B",   # Basic Materials
-    "INDS": "C",    # Industrials
-    "NONCYC": "D",  # Consumer Noncyclicals
-    "CYC": "E",     # Consumer Cyclicals
-    "HEALTH": "F",  # Healthcare
-    "FIN": "G",     # Financials
-    "PROP": "H",    # Properties & Real Estate
-    "TECH": "I",    # Technology
-    "INFRA": "J",   # Infrastructures
-    "TRANS": "K"    # Transportation & Logistic
-}
-
-# In the tab loop, update how you load the data:
+# Process each sector tab
 for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
     with tab:
         # Get the corresponding file prefix
         file_prefix = sector_file_mapping[sector_code]
         df = load_historical_data(file_prefix)
-
-
-for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
-    with tab:
-        file_prefix = sector_file_mapping[sector_code]
-        df = load_historical_data(file_prefix)
+        
+        # Create two columns for layout
         col1, col2 = st.columns([2, 1])
 
+        # Left panel - News and Prediction
         with col1:
-            titles_placeholder = "Masukkan 5 Judul Berita atau klik 'Scrape Berita'"
-            
             st.markdown(f"### 📰 Input Berita & Prediksi - {sector_name}")
+            
             with st.form(f"prediction_form_{sector_code}"):
                 news_date = st.date_input("Tanggal Berita", value=date.today(), key=f"date_{sector_code}")
                 
                 st.markdown("##### Judul Berita Hari Ini")
-                news_titles = st.text_area("Masukkan 5 Judul Berita", height=150, placeholder=titles_placeholder, key=f"news_{sector_code}")
                 
+                # Initialize session state for news titles if not exists
+                if f"news_{sector_code}" not in st.session_state:
+                    st.session_state[f"news_{sector_code}"] = ""
+                
+                news_titles = st.text_area(
+                    "Masukkan 5 Judul Berita", 
+                    height=150, 
+                    placeholder="Masukkan 5 Judul Berita atau klik 'Scrape Berita'",
+                    key=f"news_{sector_code}",
+                    value=st.session_state[f"news_{sector_code}"]
+                )
+                
+                # Scraper button
                 scrape_button = st.form_submit_button("Scrape Berita")
                 if scrape_button:
-                    scraped_titles = scrape_news(news_date)
-                    if not st.session_state.get(f"news_{sector_code}"):
-                        st.session_state[f"news_{sector_code}"] = "\n".join(scraped_titles)
-                    news_titles = st.session_state[f"news_{sector_code}"]
-                    st.experimental_rerun()
-
-
+                    with st.spinner('Mengambil berita terbaru...'):
+                        try:
+                            scraped_titles = scrape_news(news_date)
+                            if scraped_titles:
+                                st.session_state[f"news_{sector_code}"] = "\n".join(scraped_titles)
+                                st.experimental_rerun()
+                            else:
+                                st.warning("Tidak ada berita yang ditemukan untuk tanggal ini")
+                        except Exception as e:
+                            st.error(f"Error saat scraping berita: {str(e)}")
                 
+                # Prediction range selection
                 prediction_range = st.select_slider(
                     "Rentang Prediksi",
                     options=["1 Hari", "2 Hari", "3 Hari", "5 Hari", "10 Hari"],
@@ -162,72 +253,53 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                     key=f"range_{sector_code}"
                 )
                 
+                # Prediction button
                 submit_button = st.form_submit_button("Prediksi Harga Saham")
                 if submit_button:
                     with st.spinner('Melakukan prediksi...'):
+                        # Get prediction parameters
                         days = int(prediction_range.split()[0])
-                        last_price = 100  # Dummy value, ubah dengan df['Close'].iloc[-1]
                         
-                        def generate_predictions(start_price, days, volatility=0.015):
-                            prices = [start_price]
-                            for i in range(days):
-                                change = np.random.normal(0.002, volatility)
-                                new_price = prices[-1] * (1 + change)
-                                prices.append(new_price)
-                            return prices[1:]
+                        # Get the last closing price from data or use placeholder
+                        last_price = df['close'].iloc[-1] if not df.empty else 100
                         
+                        # Generate predictions
                         predictions = generate_predictions(last_price, days)
                         future_dates = [(date.today() + timedelta(days=i+1)).strftime('%d %b') for i in range(days)]
                         
                         st.success(f"Prediksi untuk {days} hari ke depan berhasil!")
                         
-                        fig2 = go.Figure()
-                        fig2.add_trace(go.Scatter(
-                            x=future_dates,
-                            y=predictions,
-                            mode='lines+markers',
-                            name='Prediksi',
-                            line=dict(color='#FF9900', width=2, dash='dot'),
-                            marker=dict(size=8)
-                        ))
-                        
-                        fig2.update_layout(
-                            title=f'Prediksi Harga - {sector_name}',
-                            yaxis_title='Harga',
-                            xaxis_title='Tanggal',
-                            template='plotly_white',
-                            height=400
-                        )
-                        
-                        st.plotly_chart(fig2, use_container_width=True)
-          
+                        # Create and display prediction chart
+                        fig2 = create_prediction_chart(future_dates, predictions, sector_name)
                         st.plotly_chart(fig2, use_container_width=True)
                         
-                        # Hasil prediksi detail
+                        # Display detailed prediction results
                         st.markdown("##### Hasil Prediksi Detail:")
                         pred_cols = st.columns(min(3, days))
                         
                         for i, (date_str, pred_price) in enumerate(zip(future_dates, predictions)):
                             with pred_cols[i % len(pred_cols)]:
+                                # Calculate change percentage
                                 change = ((pred_price - last_price if i == 0 else 
                                          pred_price - predictions[i-1]) / 
                                         (last_price if i == 0 else predictions[i-1])) * 100
                                 
+                                # Display prediction card
                                 st.markdown(f"""
                                 <div class="prediction-card">
                                     <h6>{date_str}</h6>
-                                    <p style="font-size: 1.2rem; font-weight: bold">${pred_price:.2f} 
+                                    <p style="font-size: 1.2rem; font-weight: bold">Rp {pred_price:.2f} 
                                     <span style="color: {'green' if change >= 0 else 'red'};">
                                         {'↑' if change >= 0 else '↓'} {abs(change):.2f}%
                                     </span></p>
                                 </div>
                                 """, unsafe_allow_html=True)
 
-        # PANEL ANALISIS HISTORIS DI KANAN
+        # Right panel - Historical Analysis
         with col2:
             st.markdown(f"### 📊 Analisis Data Historis - {sector_name}")
 
-            # Metrics with error handling
+            # Metric cards
             m1, m2 = st.columns(2)
             with m1:
                 if not df.empty and len(df) > 1:
@@ -249,14 +321,15 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                         start_price = df_ytd['close'].iloc[0]
                         last_close = df['close'].iloc[-1]
                         ytd_change = ((last_close - start_price) / start_price) * 100
-                        st.metric("Performa YTD", f"{ytd_change:.2f}%", delta=f"{(ytd_change):.2f}%")
+                        st.metric("Performa YTD", f"{ytd_change:.2f}%", delta=f"{ytd_change:.2f}%")
                     else:
                         st.metric("Performa YTD", "N/A", "0%")
                 else:
                     st.metric("Performa YTD", "N/A", "0%")
             
-            # Chart section
+            # Historical chart section
             if not df.empty:
+                # Time range selection
                 time_range = st.selectbox(
                     "Rentang Waktu",
                     options=["1 Minggu", "1 Bulan", "3 Bulan", "All Time"],
@@ -264,6 +337,7 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                     key=f"timerange_{sector_code}"
                 )
             
+                # Define time ranges
                 ranges = {
                     "1 Minggu": 7,
                     "1 Bulan": 30,
@@ -275,63 +349,20 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                 df['date'] = pd.to_datetime(df['date'])
                 df = df.sort_values('date').reset_index(drop=True)
             
-                # Get the filtered data
+                # Filter data based on selected time range
                 filtered_df = df.tail(ranges[time_range])
             
-                # Create figure
-                fig = go.Figure()
-            
-                # Add Close price line
-                fig.add_trace(go.Scatter(
-                    x=filtered_df['date'],
-                    y=filtered_df['close'],
-                    mode='lines',
-                    name='Close',
-                    line=dict(color='#0066cc', width=2)
-                ))
-            
-                # Add Open price line
-                fig.add_trace(go.Scatter(
-                    x=filtered_df['date'],
-                    y=filtered_df['open'],
-                    mode='lines',
-                    name='Open',
-                    line=dict(color='#00cc66', width=2)
-                ))
-            
-                # Update layout
-                fig.update_layout(
-                    title=dict(
-                        text=f'Pergerakan Harga Saham - {sector_name}',
-                        x=0.0,
-                        font=dict(size=18)
-                    ),
-                    yaxis_title='Harga (IDR)',
-                    xaxis_title='Tanggal',
-                    template='plotly_white',
-                    height=400,
-                    legend=dict(
-                        orientation="h",
-                        yanchor="bottom",
-                        y=1.02,
-                        xanchor="right",
-                        x=1
-                    ),
-                    hovermode='x unified'
-                )
-            
-                # Format y-axis
-                fig.update_yaxes(tickformat=",")
-            
-                # Show plot
+                # Create and display historical chart
+                fig = create_historical_chart(filtered_df, sector_name)
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.warning("Tidak ada data untuk ditampilkan dalam grafik")
             
-            # Historical data section
+            # Historical data table section
             st.markdown("##### Data Historis Detail")
             if not df.empty:
                 try:
+                    # Prepare display dataframe
                     display_df = df.rename(columns={
                         'date': 'Tanggal',
                         'open': 'Open',
@@ -345,9 +376,10 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                     # Format date to dd/mm/yyyy
                     display_df['Tanggal'] = pd.to_datetime(display_df['Tanggal']).dt.strftime('%d/%m/%Y')
             
-                    # Date filter
+                    # Date range filter
                     min_date = pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y').min()
                     max_date = pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y').max()
+                    
                     start_date, end_date = st.date_input(
                         "Filter Tanggal:",
                         [min_date.date(), max_date.date()],
@@ -364,6 +396,7 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                            (pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y') <= end_date)
                     filtered_display_df = display_df[mask]
             
+                    # Display formatted dataframe
                     st.dataframe(
                         filtered_display_df.style.format({
                             'Open': 'Rp {:,.2f}',
@@ -381,4 +414,3 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                     st.error(f"Kesalahan tak terduga: {e}")
             else:
                 st.warning(f"Tidak ada data historis untuk {sector_name}")
-
