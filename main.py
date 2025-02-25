@@ -332,7 +332,8 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.warning("Tidak ada data untuk ditampilkan dalam grafik")
-
+            
+            # Data HistoRIS
             st.markdown("##### Data Historis Detail")
             if not df.empty:
                 display_df = df.rename(columns={
@@ -346,16 +347,20 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                 })
             
                 # Format date to dd/mm/yyyy
-                display_df['Tanggal'] = display_df['Tanggal'].dt.strftime('%d/%m/%Y')
+                display_df['Tanggal'] = pd.to_datetime(display_df['Tanggal']).dt.strftime('%d/%m/%Y')
             
                 # Date filter
-                min_date = display_df['Tanggal'].min()
-                max_date = display_df['Tanggal'].max()
+                min_date = pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y').min()
+                max_date = pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y').max()
                 start_date, end_date = st.date_input(
                     "Filter Tanggal:",
-                    [pd.to_datetime(min_date, format='%d/%m/%Y'), pd.to_datetime(max_date, format='%d/%m/%Y')],
+                    [min_date.date(), max_date.date()],
                     format="DD/MM/YYYY"
                 )
+            
+                # Convert to datetime for comparison
+                start_date = pd.to_datetime(start_date)
+                end_date = pd.to_datetime(end_date)
             
                 # Apply date filter
                 mask = (pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y') >= start_date) & \
