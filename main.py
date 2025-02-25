@@ -346,30 +346,29 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                     'vol': 'Volume'
                 })
             
-                # Format date to dd/mm/yyyy
-                display_df['Tanggal'] = pd.to_datetime(display_df['Tanggal']).dt.strftime('%d/%m/%Y')
+
+                # Set default date range to show the latest month's data
+                latest_date = display_df['Tanggal'].max()
+                default_start_date = pd.to_datetime(f"{latest_date.year}-01-01")
+                default_end_date = latest_date
             
-                # Date filter
-                min_date = pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y').min()
-                max_date = pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y').max()
+                # Date filter with default values
                 start_date, end_date = st.date_input(
-                    "Filter Tanggal:",
-                    [min_date.date(), max_date.date()],
-                    format="DD/MM/YYYY",
-                    key=f"date_filter_{sector_code}"
+                    "Pilih rentang tanggal:",
+                    value=(default_start_date, default_end_date),
+                    min_value=display_df['Tanggal'].min().date(),
+                    max_value=display_df['Tanggal'].max().date(),
+                    format="%d/%m/%Y",
+                    key="date_filter"
                 )
             
-                # Convert to datetime for comparison
-                start_date = pd.to_datetime(start_date)
-                end_date = pd.to_datetime(end_date)
+                # Filter data based on selected dates
+                mask = (display_df['Tanggal'] >= pd.to_datetime(start_date)) & (display_df['Tanggal'] <= pd.to_datetime(end_date))
+                filtered_df = display_df[mask]
             
-                # Apply date filter
-                mask = (pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y') >= start_date) & \
-                       (pd.to_datetime(display_df['Tanggal'], format='%d/%m/%Y') <= end_date)
-                filtered_display_df = display_df[mask]
-            
+                # Display the filtered dataframe
                 st.dataframe(
-                    filtered_display_df.style.format({
+                    filtered_df.style.format({
                         'Open': 'Rp {:,.2f}',
                         'High': 'Rp {:,.2f}',
                         'Low': 'Rp {:,.2f}',
@@ -380,4 +379,4 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                     height=200
                 )
             else:
-                st.warning(f"No historical data available for {sector_name}")
+                st.write("Tidak ada data untuk ditampilkan.")
