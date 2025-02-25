@@ -238,19 +238,28 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                 if not df.empty and len(df) > 1:
                     last_close = df['close'].iloc[-1]
                     prev_close = df['close'].iloc[-2]
-                    close_change = ((last_close - prev_close)/prev_close*100)
-                    st.metric("Harga Terakhir", f"{last_close:.2f}", f"{close_change:.2f}%")
-                else:
-                    st.metric("Harga Terakhir", "N/A", "0%")
-
-            with m2:
-                if not df.empty and len(df) > 1:
-                    last_close = df['close'].iloc[-1]
-                    prev_close = df['close'].iloc[-2]
                     close_change = ((last_close - prev_close) / prev_close * 100)
                     st.metric("Harga Close", f"Rp {last_close:,.0f}", f"{close_change:.2f}%")
                 else:
                     st.metric("Harga Close", "N/A", "0%")
+
+            with m2:
+                if not df.empty and len(df) > 1:
+                    # Calculate YTD performance
+                    current_year = pd.Timestamp.now().year
+                    start_of_year = pd.Timestamp(f"{current_year}-01-01")
+                    df_ytd = df[df['date'] >= start_of_year]
+            
+                    if not df_ytd.empty:
+                        start_price = df_ytd['close'].iloc[0]
+                        last_close = df['close'].iloc[-1]
+                        ytd_change = ((last_close - start_price) / start_price) * 100
+                        st.metric("Performa YTD", f"{ytd_change:.2f}%", delta=f"{(ytd_change):.2f}%")
+                    else:
+                        st.metric("Performa YTD", "N/A", "0%")
+                else:
+                    st.metric("Performa YTD", "N/A", "0%")
+
             
             # Chart section
             if not df.empty:
