@@ -219,16 +219,17 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                 
                 st.markdown("##### Judul Berita Hari Ini")
                 
-                # Initialize session state for news titles if not exists
-                if f"news_{sector_code}" not in st.session_state:
-                    st.session_state[f"news_{sector_code}"] = ""
+                # Initialize session state for scraped news if not exists
+                if f"scraped_news_{sector_code}" not in st.session_state:
+                    st.session_state[f"scraped_news_{sector_code}"] = ""
                 
+                # Display text area with current value from session state
                 news_titles = st.text_area(
                     "Masukkan 5 Judul Berita", 
                     height=150, 
                     placeholder="Masukkan 5 Judul Berita atau klik 'Scrape Berita'",
                     key=f"news_{sector_code}",
-                    value=st.session_state[f"news_{sector_code}"]
+                    value=st.session_state[f"scraped_news_{sector_code}"]
                 )
                 
                 # Scraper button
@@ -238,12 +239,14 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                         try:
                             scraped_titles = scrape_news(news_date)
                             if scraped_titles:
-                                st.session_state[f"news_{sector_code}"] = "\n".join(scraped_titles)
+                                # Store scraped titles in a different session state key
+                                st.session_state[f"scraped_news_{sector_code}"] = "\n".join(scraped_titles)
                                 st.experimental_rerun()
                             else:
                                 st.warning("Tidak ada berita yang ditemukan untuk tanggal ini")
                         except Exception as e:
                             st.error(f"Error saat scraping berita: {str(e)}")
+
                 
                 # Prediction range selection
                 prediction_range = st.select_slider(
