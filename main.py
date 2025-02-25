@@ -242,16 +242,16 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                     st.metric("Harga Terakhir", f"${last_close:.2f}", f"{close_change:.2f}%")
                 else:
                     st.metric("Harga Terakhir", "N/A", "0%")
-            
+
             with m2:
                 if not df.empty and len(df) > 1:
                     last_vol = df['vol'].iloc[-1]
                     prev_vol = df['vol'].iloc[-2]
-                    vol_change = ((last_vol - prev_vol)/prev_vol*100)
+                    vol_change = ((last_vol - prev_vol) / prev_vol * 100)
                     st.metric("Volume", f"{last_vol:,.0f}", f"{vol_change:.2f}%")
                 else:
-                    st.metric("Volume", "N/A", "0%") 
-                    
+                    st.metric("Volume", "N/A", "0%")
+            
             # Chart section
             if not df.empty:
                 time_range = st.select_slider(
@@ -269,16 +269,15 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                 }
             
                 # Get the last N days of data
-                filtered_df = df.copy()
-                filtered_df = filtered_df.tail(ranges[time_range])
+                filtered_df = df.tail(ranges[time_range])
             
                 # Create figure
                 fig = go.Figure()
             
                 # Add Close price line
                 fig.add_trace(go.Scatter(
-                    x=filtered_df['date'],  # Note: using lowercase 'date'
-                    y=filtered_df['close'],  # Note: using lowercase 'close'
+                    x=filtered_df['date'],
+                    y=filtered_df['close'],
                     mode='lines',
                     name='Close',
                     line=dict(color='#0066cc', width=2)
@@ -286,25 +285,14 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
             
                 # Add Open price line
                 fig.add_trace(go.Scatter(
-                    x=filtered_df['date'],  # Note: using lowercase 'date'
-                    y=filtered_df['open'],  # Note: using lowercase 'open'
+                    x=filtered_df['date'],
+                    y=filtered_df['open'],
                     mode='lines',
                     name='Open',
                     line=dict(color='#00cc66', width=2)
                 ))
             
-                # Add candlestick chart
-                fig.add_trace(go.Candlestick(
-                    x=filtered_df['date'],
-                    open=filtered_df['open'],
-                    high=filtered_df['high'],
-                    low=filtered_df['low'],
-                    close=filtered_df['close'],
-                    name='Candlestick',
-                    visible='legendonly'  # Hidden by default
-                ))
-            
-                # Update layout with more details
+                # Update layout
                 fig.update_layout(
                     title=dict(
                         text=f'Pergerakan Harga Saham - {sector_name}',
@@ -322,9 +310,7 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                         xanchor="right",
                         x=1
                     ),
-                    # Add hover tools
                     hovermode='x unified',
-                    # Add range selector buttons
                     xaxis=dict(
                         rangeselector=dict(
                             buttons=list([
@@ -340,21 +326,18 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                     )
                 )
             
-                # Update y-axis to show comma format for large numbers
+                # Format y-axis
                 fig.update_yaxes(tickformat=",")
             
-                # Show the plot
+                # Show plot
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.warning("Tidak ada data untuk ditampilkan dalam grafik")
-                
-
-            # Update the historical data detail section
+            
+            # Historical data section
             st.markdown("##### Data Historis Detail")
             if not df.empty:
-                # Format the DataFrame for display
-                display_df = df.copy()
-                display_df = display_df.rename(columns={
+                display_df = df.rename(columns={
                     'date': 'Tanggal',
                     'open': 'Open',
                     'high': 'High',
@@ -363,7 +346,7 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                     'stock_num': 'Stock Num',
                     'vol': 'Volume'
                 })
-                
+            
                 st.dataframe(
                     display_df.style.format({
                         'Open': '${:.2f}',
