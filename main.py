@@ -161,7 +161,7 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                     # ... (kode prediksi yang sama seperti sebelumnya, dengan penambahan key unik) ...
                     with st.spinner('Melakukan prediksi...'):
                         days = int(prediction_range.split()[0])
-                        last_price = df['Close'].iloc[-1]
+                        last_price = df['close'].iloc[-1]
                         
                         def generate_predictions(start_price, days, volatility=0.015):
                             prices = [start_price]
