@@ -308,8 +308,8 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                 fig.update_layout(
                     title=dict(
                         text=f'Pergerakan Harga Saham - {sector_name}',
-                        x=0.5,
-                        font=dict(size=20)
+                        x=0.0,
+                        font=dict(size=18)
                     ),
                     yaxis_title='Harga (IDR)',
                     xaxis_title='Tanggal',
