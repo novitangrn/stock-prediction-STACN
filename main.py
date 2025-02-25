@@ -147,7 +147,7 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                 
                 scrape_button = st.form_submit_button("Scrape Berita")
                 if scrape_button:
-                    scraped_titles = scrape_news(news_date.strftime("%d/%m/%Y"))
+                    scraped_titles = scrape_news(news_date)
                     st.session_state[f"news_{sector_code}"] = "\n".join(scraped_titles)
                     st.rerun()
                 
