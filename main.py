@@ -135,18 +135,20 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
         col1, col2 = st.columns([2, 1])
 
         with col1:
-            st.markdown(f"### 📰 Input Berita & Prediksi - {sector_name}")
+            titles_placeholder = "Masukkan 5 Judul Berita atau klik 'Scrape Berita'"
             
+            st.markdown(f"### 📰 Input Berita & Prediksi - {sector_name}")
             with st.form(f"prediction_form_{sector_code}"):
-                news_date = st.date_input(f"Tanggal Berita", value=date.today(), key=f"date_{sector_code}")
+                news_date = st.date_input("Tanggal Berita", value=date.today(), key=f"date_{sector_code}")
                 
                 st.markdown("##### Judul Berita Hari Ini")
-                news_titles = st.text_area(
-                    "Masukkan 5 Judul Berita (Pisahkan dengan Enter)",
-                    height=150,
-                    placeholder="Contoh:\nBerita 1\nBerita 2\nBerita 3...",
-                    key=f"news_{sector_code}"
-                )
+                news_titles = st.text_area("Masukkan 5 Judul Berita", height=150, placeholder=titles_placeholder, key=f"news_{sector_code}")
+                
+                scrape_button = st.form_submit_button("Scrape Berita")
+                if scrape_button:
+                    scraped_titles = scrape_news(news_date.strftime("%d/%m/%Y"))
+                    st.session_state[f"news_{sector_code}"] = "\n".join(scraped_titles)
+                    st.rerun()
                 
                 prediction_range = st.select_slider(
                     "Rentang Prediksi",
@@ -156,17 +158,15 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                 )
                 
                 submit_button = st.form_submit_button("Prediksi Harga Saham")
-                
                 if submit_button:
-                    # ... (kode prediksi yang sama seperti sebelumnya, dengan penambahan key unik) ...
                     with st.spinner('Melakukan prediksi...'):
                         days = int(prediction_range.split()[0])
-                        last_price = df['close'].iloc[-1]
+                        last_price = 100  # Dummy value, ubah dengan df['Close'].iloc[-1]
                         
                         def generate_predictions(start_price, days, volatility=0.015):
                             prices = [start_price]
                             for i in range(days):
-                                change = np.random.normal(0.002, volatility) 
+                                change = np.random.normal(0.002, volatility)
                                 new_price = prices[-1] * (1 + change)
                                 prices.append(new_price)
                             return prices[1:]
@@ -176,22 +176,10 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                         
                         st.success(f"Prediksi untuk {days} hari ke depan berhasil!")
                         
-                        # Grafik prediksi
-                        hist_dates = df['date'].iloc[-5:].tolist()
-                        hist_prices = df['close'].iloc[-5:].tolist()
-                        
                         fig2 = go.Figure()
                         fig2.add_trace(go.Scatter(
-                            x=hist_dates, 
-                            y=hist_prices,
-                            mode='lines',
-                            name='Historis',
-                            line=dict(color='#0066cc', width=2)
-                        ))
-                        
-                        fig2.add_trace(go.Scatter(
-                            x=[hist_dates[-1]] + [datetime.strptime(f"{date.today().year} {d}", "%Y %d %b") for d in future_dates],
-                            y=[hist_prices[-1]] + predictions,
+                            x=future_dates,
+                            y=predictions,
                             mode='lines+markers',
                             name='Prediksi',
                             line=dict(color='#FF9900', width=2, dash='dot'),
@@ -206,6 +194,8 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                             height=400
                         )
                         
+                        st.plotly_chart(fig2, use_container_width=True)
+          
                         st.plotly_chart(fig2, use_container_width=True)
                         
                         # Hasil prediksi detail
