@@ -239,36 +239,40 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                     last_close = df['close'].iloc[-1]
                     prev_close = df['close'].iloc[-2]
                     close_change = ((last_close - prev_close)/prev_close*100)
-                    st.metric("Harga Terakhir", f"${last_close:.2f}", f"{close_change:.2f}%")
+                    st.metric("Harga Terakhir", f"{last_close:.2f}", f"{close_change:.2f}%")
                 else:
                     st.metric("Harga Terakhir", "N/A", "0%")
 
             with m2:
                 if not df.empty and len(df) > 1:
-                    last_vol = df['vol'].iloc[-1]
-                    prev_vol = df['vol'].iloc[-2]
-                    vol_change = ((last_vol - prev_vol) / prev_vol * 100)
-                    st.metric("Volume", f"{last_vol:,.0f}", f"{vol_change:.2f}%")
+                    last_close = df['close'].iloc[-1]
+                    prev_close = df['close'].iloc[-2]
+                    close_change = ((last_close - prev_close) / prev_close * 100)
+                    st.metric("Harga Close", f"Rp {last_close:,.0f}", f"{close_change:.2f}%")
                 else:
-                    st.metric("Volume", "N/A", "0%")
+                    st.metric("Harga Close", "N/A", "0%")
             
             # Chart section
             if not df.empty:
-                time_range = st.select_slider(
+                time_range = st.selectbox(
                     "Rentang Waktu",
-                    options=["5 Hari", "10 Hari", "1 Bulan", "3 Bulan"],
-                    value="10 Hari",
+                    options=["1 Minggu", "1 Bulan", "3 Bulan", "All Time"],
+                    index=1,
                     key=f"timerange_{sector_code}"
                 )
             
                 ranges = {
-                    "5 Hari": 5,
-                    "10 Hari": 10,
+                    "1 Minggu": 7,
                     "1 Bulan": 30,
-                    "3 Bulan": 90
+                    "3 Bulan": 90,
+                    "All Time": len(df)
                 }
             
-                # Get the last N days of data
+                # Ensure date is datetime and sorted
+                df['date'] = pd.to_datetime(df['date'])
+                df = df.sort_values('date').reset_index(drop=True)
+            
+                # Get the filtered data
                 filtered_df = df.tail(ranges[time_range])
             
                 # Create figure
@@ -310,20 +314,7 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                         xanchor="right",
                         x=1
                     ),
-                    hovermode='x unified',
-                    xaxis=dict(
-                        rangeselector=dict(
-                            buttons=list([
-                                dict(count=5, label="5H", step="day", stepmode="backward"),
-                                dict(count=10, label="10H", step="day", stepmode="backward"),
-                                dict(count=1, label="1B", step="month", stepmode="backward"),
-                                dict(count=3, label="3B", step="month", stepmode="backward"),
-                                dict(step="all", label="Semua")
-                            ])
-                        ),
-                        rangeslider=dict(visible=True),
-                        type="date"
-                    )
+                    hovermode='x unified'
                 )
             
                 # Format y-axis
@@ -349,10 +340,10 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
             
                 st.dataframe(
                     display_df.style.format({
-                        'Open': '${:.2f}',
-                        'High': '${:.2f}',
-                        'Low': '${:.2f}',
-                        'Close': '${:.2f}',
+                        'Open': 'Rp {:,.2f}',
+                        'High': 'Rp {:,.2f}',
+                        'Low': 'Rp {:,.2f}',
+                        'Close': 'Rp {:,.2f}',
                         'Volume': '{:,.0f}',
                         'Stock Num': '{:,.0f}'
                     }),
