@@ -346,7 +346,6 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                     'vol': 'Volume'
                 })
             
-
                 # Set default date range to show the latest month's data
                 latest_date = display_df['Tanggal'].max()
                 default_start_date = pd.to_datetime(f"{latest_date.year}-01-01")
@@ -358,7 +357,7 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                     value=(default_start_date, default_end_date),
                     min_value=display_df['Tanggal'].min().date(),
                     max_value=display_df['Tanggal'].max().date(),
-                    format="%d/%m/%Y",
+                    format="DD/MM/YYYY",
                     key="date_filter"
                 )
             
