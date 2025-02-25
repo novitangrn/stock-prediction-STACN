@@ -151,8 +151,7 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                     if not st.session_state.get(f"news_{sector_code}"):
                         st.session_state[f"news_{sector_code}"] = "\n".join(scraped_titles)
                     news_titles = st.session_state[f"news_{sector_code}"]
-                    
-                    st.rerun()
+                    st.experimental_rerun()
 
 
                 
