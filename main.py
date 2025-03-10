@@ -211,39 +211,39 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
         with col1:
             st.markdown(f"### 📰 Input Berita & Prediksi - {sector_name}")
             
+            # Initialize session state for scraped news if not exists
+            if f"scraped_news_{sector_code}" not in st.session_state:
+                st.session_state[f"scraped_news_{sector_code}"] = ""
+            
+            # Date input for news outside the form
+            news_date = st.date_input("Tanggal Berita", value=date.today(), key=f"date_{sector_code}")
+            
+            # Scraper button outside the form and above text area
+            if st.button("Scrape Berita", key=f"scrape_{sector_code}"):
+                with st.spinner('Mengambil berita terbaru...'):
+                    try:
+                        scraped_titles = scrape_news(news_date)
+                        if scraped_titles:
+                            # Store scraped titles in session state
+                            st.session_state[f"scraped_news_{sector_code}"] = "\n".join(scraped_titles)
+                            st.success(f"Berhasil mengambil {len(scraped_titles)} berita!")
+                        else:
+                            st.warning("Tidak ada berita yang ditemukan untuk tanggal ini")
+                    except Exception as e:
+                        st.error(f"Error saat scraping berita: {str(e)}")
+            
+            # Judul berita section with text area below scrape button
+            st.markdown("##### Judul Berita Hari Ini")
+            news_titles = st.text_area(
+                "Masukkan 5 Judul Berita", 
+                height=150, 
+                placeholder="Masukkan 5 Judul Berita atau klik 'Scrape Berita' di atas",
+                key=f"news_{sector_code}",
+                value=st.session_state[f"scraped_news_{sector_code}"]
+            )
+            
+            # Prediction form now only contains the prediction button
             with st.form(f"prediction_form_{sector_code}"):
-                news_date = st.date_input("Tanggal Berita", value=date.today(), key=f"date_{sector_code}")
-                
-                st.markdown("##### Judul Berita Hari Ini")
-                
-                # Initialize session state for scraped news if not exists
-                if f"scraped_news_{sector_code}" not in st.session_state:
-                    st.session_state[f"scraped_news_{sector_code}"] = ""
-                
-                # Display text area with current value from session state
-                news_titles = st.text_area(
-                    "Masukkan 5 Judul Berita", 
-                    height=150, 
-                    placeholder="Masukkan 5 Judul Berita atau klik 'Scrape Berita'",
-                    key=f"news_{sector_code}",
-                    value=st.session_state[f"scraped_news_{sector_code}"]
-                )
-                
-                # Scraper button
-                scrape_button = st.form_submit_button("Scrape Berita")
-                if scrape_button:
-                    with st.spinner('Mengambil berita terbaru...'):
-                        try:
-                            scraped_titles = scrape_news(news_date)
-                            if scraped_titles:
-                                # Store scraped titles in a different session state key
-                                st.session_state[f"scraped_news_{sector_code}"] = "\n".join(scraped_titles)
-                                st.rerun()
-                            else:
-                                st.warning("Tidak ada berita yang ditemukan untuk tanggal ini")
-                        except Exception as e:
-                            st.error(f"Error saat scraping berita: {str(e)}")
-                
                 # Prediction button - No slider, just button for one day prediction
                 submit_button = st.form_submit_button("Prediksi Harga Saham (1 Hari)")
                 if submit_button:
