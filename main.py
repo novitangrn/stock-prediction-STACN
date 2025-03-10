@@ -8,7 +8,7 @@ from scraper import scrape_news
 
 # Page configuration
 st.set_page_config(
-    page_title='Sectoral Stock Prediction Dashboard',
+    page_title='QuantiNews: Sectoral Stock Prediction Dashboard',
     page_icon='📈',
     layout='wide'
 )
@@ -125,24 +125,72 @@ def generate_predictions(start_price, volatility=0.015):
     new_price = start_price * (1 + change)
     return [new_price]
 
-# Function to create prediction chart
-def create_prediction_chart(future_date, prediction, sector_name):
+# Function to create prediction chart with historical data
+def create_prediction_chart(historical_df, future_date, prediction, sector_name):
+    # Get last 30 days of historical data
+    last_30_days = historical_df.tail(30).copy()
+    
+    # Create dataframe for prediction point
+    prediction_df = pd.DataFrame({
+        'date': [pd.to_datetime(future_date, format='%d %b')],
+        'close': [prediction]
+    })
+    
+    # Create figure
     fig = go.Figure()
+    
+    # Add historical line
     fig.add_trace(go.Scatter(
-        x=[future_date],
-        y=[prediction],
+        x=last_30_days['date'],
+        y=last_30_days['close'],
+        mode='lines',
+        name='Historis',
+        line=dict(color='#0066cc', width=2)
+    ))
+    
+    # Add prediction point
+    fig.add_trace(go.Scatter(
+        x=prediction_df['date'],
+        y=prediction_df['close'],
         mode='markers',
         name='Prediksi',
         marker=dict(size=12, color='#FF9900')
     ))
     
+    # Add connecting dashed line between last historical point and prediction
+    if not last_30_days.empty:
+        connect_df = pd.DataFrame({
+            'date': [last_30_days['date'].iloc[-1], prediction_df['date'].iloc[0]],
+            'close': [last_30_days['close'].iloc[-1], prediction_df['close'].iloc[0]]
+        })
+        
+        fig.add_trace(go.Scatter(
+            x=connect_df['date'],
+            y=connect_df['close'],
+            mode='lines',
+            name='Proyeksi',
+            line=dict(color='#FF9900', width=2, dash='dash')
+        ))
+    
+    # Update layout
     fig.update_layout(
         title=f'Prediksi Harga - {sector_name}',
         yaxis_title='Harga',
         xaxis_title='Tanggal',
         template='plotly_white',
-        height=400
+        height=400,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+        hovermode='x unified'
     )
+    
+    # Format y-axis
+    fig.update_yaxes(tickformat=",")
     
     return fig
 
@@ -257,8 +305,8 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                         
                         st.success(f"Prediksi untuk besok ({future_date}) berhasil!")
                         
-                        # Create and display prediction chart
-                        fig2 = create_prediction_chart(future_date, prediction, sector_name)
+                        # Create and display prediction chart with historical data
+                        fig2 = create_prediction_chart(df, future_date, prediction, sector_name)
                         st.plotly_chart(fig2, use_container_width=True)
                         
                         # Display detailed prediction result
