@@ -8,7 +8,7 @@ from scraper import scrape_news
 
 # Page configuration
 st.set_page_config(
-    page_title='QuantiNews: Sectoral Stock Prediction Dashboard',
+    page_title='Sectoral Stock Prediction Dashboard',
     page_icon='📈',
     layout='wide'
 )
@@ -126,42 +126,45 @@ def generate_predictions(start_price, volatility=0.015):
     return [new_price]
 
 # Function to create prediction chart with historical data
-def create_prediction_chart(historical_df, future_date, prediction, sector_name):
-    # Get last 30 days of historical data
-    last_30_days = historical_df.tail(30).copy()
-    
-    # Create dataframe for prediction point
-    prediction_df = pd.DataFrame({
-        'date': [pd.to_datetime(future_date, format='%d %b')],
-        'close': [prediction]
-    })
-    
-    # Create figure
-    fig = go.Figure()
-    
-    # Add historical line
-    fig.add_trace(go.Scatter(
-        x=last_30_days['date'],
-        y=last_30_days['close'],
-        mode='lines',
-        name='Historis',
-        line=dict(color='#0066cc', width=2)
-    ))
-    
-    # Add prediction point
-    fig.add_trace(go.Scatter(
-        x=prediction_df['date'],
-        y=prediction_df['close'],
-        mode='markers',
-        name='Prediksi',
-        marker=dict(size=12, color='#FF9900')
-    ))
-    
-    # Add connecting dashed line between last historical point and prediction
-    if not last_30_days.empty:
+def create_prediction_chart(historical_df, future_date_str, prediction, sector_name):
+    # Make sure historical dataframe has correct date format
+    if not historical_df.empty:
+        historical_df = historical_df.copy()
+        historical_df['date'] = pd.to_datetime(historical_df['date'])
+        
+        # Get last 30 days of historical data
+        last_30_days = historical_df.tail(30).copy()
+        
+        # Convert future_date_str to actual date object
+        # Assume future_date_str is in format '01 Mar'
+        current_year = datetime.now().year
+        future_date = datetime.strptime(f"{future_date_str} {current_year}", "%d %b %Y")
+        
+        # Create figure
+        fig = go.Figure()
+        
+        # Add historical line
+        fig.add_trace(go.Scatter(
+            x=last_30_days['date'],
+            y=last_30_days['close'],
+            mode='lines',
+            name='Historis',
+            line=dict(color='#0066cc', width=2)
+        ))
+        
+        # Add prediction point
+        fig.add_trace(go.Scatter(
+            x=[future_date],
+            y=[prediction],
+            mode='markers',
+            name='Prediksi',
+            marker=dict(size=12, color='#FF9900')
+        ))
+        
+        # Add connecting dashed line between last historical point and prediction
         connect_df = pd.DataFrame({
-            'date': [last_30_days['date'].iloc[-1], prediction_df['date'].iloc[0]],
-            'close': [last_30_days['close'].iloc[-1], prediction_df['close'].iloc[0]]
+            'date': [last_30_days['date'].iloc[-1], future_date],
+            'close': [last_30_days['close'].iloc[-1], prediction]
         })
         
         fig.add_trace(go.Scatter(
@@ -171,28 +174,49 @@ def create_prediction_chart(historical_df, future_date, prediction, sector_name)
             name='Proyeksi',
             line=dict(color='#FF9900', width=2, dash='dash')
         ))
-    
-    # Update layout
-    fig.update_layout(
-        title=f'Prediksi Harga - {sector_name}',
-        yaxis_title='Harga',
-        xaxis_title='Tanggal',
-        template='plotly_white',
-        height=400,
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1
-        ),
-        hovermode='x unified'
-    )
-    
-    # Format y-axis
-    fig.update_yaxes(tickformat=",")
-    
-    return fig
+        
+        # Update layout
+        fig.update_layout(
+            title=f'Prediksi Harga - {sector_name}',
+            yaxis_title='Harga',
+            xaxis_title='Tanggal',
+            template='plotly_white',
+            height=400,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            ),
+            hovermode='x unified'
+        )
+        
+        # Format axes
+        fig.update_yaxes(tickformat=",")
+        fig.update_xaxes(
+            tickformat="%d %b", 
+            tickmode='auto',
+            nticks=10
+        )
+        
+        return fig
+    else:
+        # Create an empty figure with a message if no data
+        fig = go.Figure()
+        fig.update_layout(
+            title=f'Prediksi Harga - {sector_name}',
+            annotations=[dict(
+                text='Tidak ada data tersedia',
+                xref="paper",
+                yref="paper",
+                x=0.5,
+                y=0.5,
+                showarrow=False
+            )],
+            height=400
+        )
+        return fig
 
 # Function to create historical price chart
 def create_historical_chart(filtered_df, sector_name):
@@ -294,19 +318,19 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
             with st.form(f"prediction_form_{sector_code}"):
                 # Prediction button - No slider, just button for one day prediction
                 submit_button = st.form_submit_button("Prediksi Harga Saham (1 Hari)")
-                if submit_button:
+                if submit_button and not df.empty:
                     with st.spinner('Melakukan prediksi...'):
                         # Get the last closing price from data or use placeholder
                         last_price = df['close'].iloc[-1] if not df.empty else 100
                         
                         # Generate prediction for a single day
                         prediction = generate_predictions(last_price)[0]
-                        future_date = (date.today() + timedelta(days=1)).strftime('%d %b')
+                        future_date_str = (date.today() + timedelta(days=1)).strftime('%d %b')
                         
-                        st.success(f"Prediksi untuk besok ({future_date}) berhasil!")
+                        st.success(f"Prediksi untuk besok ({future_date_str}) berhasil!")
                         
                         # Create and display prediction chart with historical data
-                        fig2 = create_prediction_chart(df, future_date, prediction, sector_name)
+                        fig2 = create_prediction_chart(df, future_date_str, prediction, sector_name)
                         st.plotly_chart(fig2, use_container_width=True)
                         
                         # Display detailed prediction result
@@ -318,13 +342,15 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                         # Display prediction card
                         st.markdown(f"""
                         <div class="prediction-card">
-                            <h6>{future_date}</h6>
+                            <h6>{future_date_str}</h6>
                             <p style="font-size: 1.2rem; font-weight: bold">Rp {prediction:.2f} 
                             <span style="color: {'green' if change >= 0 else 'red'};">
                                 {'↑' if change >= 0 else '↓'} {abs(change):.2f}%
                             </span></p>
                         </div>
                         """, unsafe_allow_html=True)
+                elif submit_button and df.empty:
+                    st.error("Tidak dapat melakukan prediksi: Data historis tidak tersedia")
 
         # Right panel - Historical Analysis
         with col2:
