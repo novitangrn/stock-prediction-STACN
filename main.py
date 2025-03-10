@@ -119,24 +119,21 @@ def load_historical_data(sector_prefix):
         return pd.DataFrame(columns=['date', 'open', 'high', 'low', 'close', 'stock_num', 'vol'])
 
 # Generate predictions function (moved outside of submit button logic)
-def generate_predictions(start_price, days, volatility=0.015):
-    prices = [start_price]
-    for i in range(days):
-        change = np.random.normal(0.002, volatility)
-        new_price = prices[-1] * (1 + change)
-        prices.append(new_price)
-    return prices[1:]
+def generate_predictions(start_price, volatility=0.015):
+    # Only generate one day prediction
+    change = np.random.normal(0.002, volatility)
+    new_price = start_price * (1 + change)
+    return [new_price]
 
 # Function to create prediction chart
-def create_prediction_chart(future_dates, predictions, sector_name):
+def create_prediction_chart(future_date, prediction, sector_name):
     fig = go.Figure()
     fig.add_trace(go.Scatter(
-        x=future_dates,
-        y=predictions,
-        mode='lines+markers',
+        x=[future_date],
+        y=[prediction],
+        mode='markers',
         name='Prediksi',
-        line=dict(color='#FF9900', width=2, dash='dot'),
-        marker=dict(size=8)
+        marker=dict(size=12, color='#FF9900')
     ))
     
     fig.update_layout(
@@ -246,57 +243,40 @@ for tab, (sector_name, sector_code) in zip(tabs, sectors.items()):
                                 st.warning("Tidak ada berita yang ditemukan untuk tanggal ini")
                         except Exception as e:
                             st.error(f"Error saat scraping berita: {str(e)}")
-
                 
-                # Prediction range selection
-                prediction_range = st.select_slider(
-                    "Rentang Prediksi",
-                    options=["1 Hari", "2 Hari", "3 Hari", "5 Hari", "10 Hari"],
-                    value="5 Hari",
-                    key=f"range_{sector_code}"
-                )
-                
-                # Prediction button
-                submit_button = st.form_submit_button("Prediksi Harga Saham")
+                # Prediction button - No slider, just button for one day prediction
+                submit_button = st.form_submit_button("Prediksi Harga Saham (1 Hari)")
                 if submit_button:
                     with st.spinner('Melakukan prediksi...'):
-                        # Get prediction parameters
-                        days = int(prediction_range.split()[0])
-                        
                         # Get the last closing price from data or use placeholder
                         last_price = df['close'].iloc[-1] if not df.empty else 100
                         
-                        # Generate predictions
-                        predictions = generate_predictions(last_price, days)
-                        future_dates = [(date.today() + timedelta(days=i+1)).strftime('%d %b') for i in range(days)]
+                        # Generate prediction for a single day
+                        prediction = generate_predictions(last_price)[0]
+                        future_date = (date.today() + timedelta(days=1)).strftime('%d %b')
                         
-                        st.success(f"Prediksi untuk {days} hari ke depan berhasil!")
+                        st.success(f"Prediksi untuk besok ({future_date}) berhasil!")
                         
                         # Create and display prediction chart
-                        fig2 = create_prediction_chart(future_dates, predictions, sector_name)
+                        fig2 = create_prediction_chart(future_date, prediction, sector_name)
                         st.plotly_chart(fig2, use_container_width=True)
                         
-                        # Display detailed prediction results
+                        # Display detailed prediction result
                         st.markdown("##### Hasil Prediksi Detail:")
-                        pred_cols = st.columns(min(3, days))
                         
-                        for i, (date_str, pred_price) in enumerate(zip(future_dates, predictions)):
-                            with pred_cols[i % len(pred_cols)]:
-                                # Calculate change percentage
-                                change = ((pred_price - last_price if i == 0 else 
-                                         pred_price - predictions[i-1]) / 
-                                        (last_price if i == 0 else predictions[i-1])) * 100
-                                
-                                # Display prediction card
-                                st.markdown(f"""
-                                <div class="prediction-card">
-                                    <h6>{date_str}</h6>
-                                    <p style="font-size: 1.2rem; font-weight: bold">Rp {pred_price:.2f} 
-                                    <span style="color: {'green' if change >= 0 else 'red'};">
-                                        {'↑' if change >= 0 else '↓'} {abs(change):.2f}%
-                                    </span></p>
-                                </div>
-                                """, unsafe_allow_html=True)
+                        # Calculate change percentage
+                        change = ((prediction - last_price) / last_price) * 100
+                        
+                        # Display prediction card
+                        st.markdown(f"""
+                        <div class="prediction-card">
+                            <h6>{future_date}</h6>
+                            <p style="font-size: 1.2rem; font-weight: bold">Rp {prediction:.2f} 
+                            <span style="color: {'green' if change >= 0 else 'red'};">
+                                {'↑' if change >= 0 else '↓'} {abs(change):.2f}%
+                            </span></p>
+                        </div>
+                        """, unsafe_allow_html=True)
 
         # Right panel - Historical Analysis
         with col2:
