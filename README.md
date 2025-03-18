@@ -1,5 +1,3 @@
-# stock-prediction-dashboard
-
 # Dashboard Prediksi Saham Sektoral
 
 Repository ini berisi aplikasi dashboard untuk prediksi harga saham sektoral IDX-IC di pasar modal Indonesia menggunakan model Spatial-Temporal Attention-Based Convolutional Network (STACN). Aplikasi ini dikembangkan dengan Streamlit untuk memvisualisasikan data historis dan menyajikan prediksi harga saham.
